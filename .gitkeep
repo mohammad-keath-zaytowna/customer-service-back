@@ -1,0 +1,3 @@
+# Create uploads directory and keep it in git
+mkdir uploads
+touch uploads/.gitkeep
