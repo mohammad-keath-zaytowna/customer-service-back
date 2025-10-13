@@ -47,7 +47,18 @@ const apiLogger = (req, res, next) => {
 
 app.use(apiLogger);
 // Middleware
-app.use(cors());
+// Allow requests from the frontend and allow credentials (cookies) to be sent.
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+app.use(
+  cors({
+    origin: FRONTEND_URL,
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+// Ensure preflight requests are handled for all routes
+app.options("*", cors({ origin: FRONTEND_URL, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
