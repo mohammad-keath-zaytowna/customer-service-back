@@ -54,11 +54,9 @@ app.use(
     origin: FRONTEND_URL,
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   })
 );
-
-// Ensure preflight requests are handled for all routes
-app.options("*", cors({ origin: FRONTEND_URL, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

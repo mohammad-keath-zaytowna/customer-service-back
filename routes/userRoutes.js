@@ -142,7 +142,8 @@ router.post("/auth/sign-in", async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.json({ success: true });
+    // Also return token in response body for clients that prefer Bearer auth
+    res.json({ success: true, token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (error) {
     res.status(500).json({ errors: { general: "Error logging in" } });
   }
