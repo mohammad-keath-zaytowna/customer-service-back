@@ -90,6 +90,9 @@ router.post("/login", async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
+    if (user.blocked) {
+      return res.status(403).json({ message: "User is blocked" });
+    }
 
     const token = jwt.sign(
       { userId: user._id, email: user.email },
@@ -143,7 +146,16 @@ router.post("/auth/sign-in", async (req, res) => {
     });
 
     // Also return token in response body for clients that prefer Bearer auth
-    res.json({ success: true, token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
   } catch (error) {
     res.status(500).json({ errors: { general: "Error logging in" } });
   }
@@ -157,8 +169,40 @@ router.get("/me", auth, async (req, res) => {
 // List all users (admin only)
 router.get("/", auth, isAdmin, async (req, res) => {
   try {
-    const users = await User.find().select("-password");
-    res.json({ users });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || "";
+
+    const query = {
+      role: "user",
+      $or: [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { phone: { $regex: search, $options: "i" } }, // optional if you have a phone field
+      ],
+    };
+
+    const totalItems = await User.countDocuments(query);
+    const totalPages = Math.ceil(totalItems / limit);
+    const skip = (page - 1) * limit;
+
+    const users = await User.find(query)
+      .select("-password")
+      .limit(limit)
+      .skip(skip)
+      .sort({ createdAt: -1 }); // optional: newest first
+
+    res.json({
+      data: users,
+      pagination: {
+        current: page,
+        limit,
+        items: totalItems,
+        pages: totalPages,
+        prev: page > 1 ? page - 1 : null,
+        next: page < totalPages ? page + 1 : null,
+      },
+    });
   } catch (error) {
     res
       .status(500)
@@ -183,7 +227,7 @@ router.delete("/:id", auth, isAdmin, async (req, res) => {
 router.patch("/:id", auth, isAdmin, async (req, res) => {
   try {
     const updates = {};
-    const allowed = ["name", "email", "phone", "role"];
+    const allowed = ["name", "email", "phone", "role", "blocked"];
     for (const key of allowed) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
     }
@@ -201,6 +245,20 @@ router.patch("/:id", auth, isAdmin, async (req, res) => {
       .status(500)
       .json({ message: "Error updating user", error: error.message });
   }
+});
+
+router.post("/auth/sign-out", auth, (req, res) => {
+  const token = req.headers.authorization?.split(" ")[1];
+
+  res.cookie("token", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    expires: new Date(0),
+    path: "/",
+  });
+
+  res.json({ success: true });
 });
 
 module.exports = router;

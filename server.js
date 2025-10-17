@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
+const cookieParser = require("cookie-parser");
 
 dotenv.config();
 
@@ -46,6 +47,7 @@ const apiLogger = (req, res, next) => {
 };
 
 app.use(apiLogger);
+app.use(cookieParser());
 // Middleware
 // Allow requests from the frontend and allow credentials (cookies) to be sent.
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
