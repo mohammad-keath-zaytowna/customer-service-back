@@ -8,14 +8,14 @@ const router = express.Router();
 // Register
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    const user = new User({ name, email, password, role });
+    const user = new User({ name, email, password });
     await user.save();
 
     const token = jwt.sign(
@@ -44,14 +44,14 @@ router.post("/register", async (req, res) => {
 // Auth route for frontend sign-up (compatibility with ecommerce-admin)
 router.post("/auth/sign-up", async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    const user = new User({ name, email, password, role });
+    const user = new User({ name, email, password });
     await user.save();
 
     const token = jwt.sign(
@@ -130,6 +130,11 @@ router.post("/auth/sign-in", async (req, res) => {
       return res
         .status(401)
         .json({ errors: { password: "Invalid credentials" } });
+    }
+    if (user.role !== "admin") {
+      return res
+        .status(401)
+        .json({ errors: { general: "Invalid credentials" } });
     }
 
     const token = jwt.sign(

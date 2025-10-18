@@ -39,6 +39,9 @@ const auth = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({ message: "User not found" });
     }
+    if (user.blocked) {
+      return res.status(403).json({ message: "User is blocked" });
+    }
 
     req.user = user;
     next();
