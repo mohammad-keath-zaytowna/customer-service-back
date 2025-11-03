@@ -2,6 +2,7 @@ const express = require("express");
 const Order = require("../models/Order");
 const { auth, isAdmin } = require("../middleware/auth");
 const upload = require("../middleware/upload");
+const { uploadToS3, getFileUrl } = require("../utils/s3");
 const { isValidObjectId } = require("mongoose");
 
 const router = express.Router();
@@ -10,7 +11,7 @@ const router = express.Router();
 router.post("/", auth, upload.array("images", 5), async (req, res) => {
   try {
     const { name, address, price, phoneNumber, details } = req.body;
-
+    console.log("req.files", req.files);
     // Check if files were uploaded
     if (!req.files || req.files.length === 0) {
       return res
@@ -18,24 +19,41 @@ router.post("/", auth, upload.array("images", 5), async (req, res) => {
         .json({ message: "At least one image is required" });
     }
 
-    // Get image paths
-    const imagePaths = req.files.map((file) => `/uploads/${file.filename}`);
+    // Upload files to S3 and build image URLs
+    try {
+      const uploadPromises = req.files.map((file) => uploadToS3(file));
+      const uploadedKeys = await Promise.all(uploadPromises);
 
-    const order = new Order({
-      name,
-      images: imagePaths,
-      address,
-      price,
-      phoneNumber,
-      details,
-      userId: req.user._id,
-    });
+      // Build S3 public URLs (assumes bucket objects are publicly readable).
+      // If your bucket is private, consider storing the key and using signed URLs when serving.
+      const region = process.env.BUCKET_REGION;
+      const bucket = process.env.BUCKET_NAME;
+      const imagePaths = uploadedKeys.map(
+        (key) => `https://${bucket}.s3.${region}.amazonaws.com/${key}`
+      );
 
-    await order.save();
-    res.status(201).json({
-      message: "Order created successfully",
-      order,
-    });
+      const order = new Order({
+        name,
+        images: imagePaths,
+        address,
+        price,
+        phoneNumber,
+        details,
+        userId: req.user._id,
+      });
+
+      await order.save();
+      return res.status(201).json({
+        message: "Order created successfully",
+        order,
+      });
+    } catch (s3Error) {
+      console.error("S3 upload error:", s3Error);
+      return res.status(500).json({
+        message: "Error uploading images to S3",
+        error: s3Error.message,
+      });
+    }
   } catch (error) {
     res.status(500).json({
       message: "Error creating order",
@@ -159,6 +177,8 @@ router.get("/:id", auth, async (req, res) => {
     ) {
       return res.status(403).json({ message: "Access denied" });
     }
+
+    order.images = order.images.map((image) => getFileUrl(image));
 
     res.json({ order });
   } catch (error) {

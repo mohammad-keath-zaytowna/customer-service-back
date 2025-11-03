@@ -50,7 +50,7 @@ app.use(apiLogger);
 app.use(cookieParser());
 // Middleware
 // Allow requests from the frontend and allow credentials (cookies) to be sent.
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3001";
 app.use(
   cors({
     origin: FRONTEND_URL,

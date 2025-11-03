@@ -163,7 +163,7 @@ router.post("/auth/sign-in", async (req, res) => {
 
 // Get current user
 router.get("/me", auth, async (req, res) => {
-  res.json({ user: req.user });
+  res.json({ user: req.user, token: req.token });
 });
 
 // List all users (admin only)
