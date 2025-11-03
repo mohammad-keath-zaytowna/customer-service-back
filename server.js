@@ -51,14 +51,7 @@ app.use(cookieParser());
 // Middleware
 // Allow requests from the frontend and allow credentials (cookies) to be sent.
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3001";
-app.use(
-  cors({
-    origin: FRONTEND_URL,
-    credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"],
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  })
-);
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
