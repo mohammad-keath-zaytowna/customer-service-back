@@ -51,7 +51,7 @@ app.use(cookieParser());
 // Middleware
 // Allow requests from the frontend and allow credentials (cookies) to be sent.
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3001";
-const allowedOrigin = "https://customer-service-admin.vercel.app";
+const allowedOrigin = "https://api-lamsa.sadiq-store.com";
 
 app.use(
   cors({
