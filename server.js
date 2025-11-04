@@ -50,7 +50,7 @@ app.use(apiLogger);
 app.use(cookieParser());
 // Middleware
 // Allow requests from the frontend and allow credentials (cookies) to be sent.
-const FRONTEND_URL = "http://192.168.1.6:3001";
+const FRONTEND_URL = "http://localhost:3001";
 const allowedOrigin = "https://customer-service-admin.vercel.app";
 
 app.use(
