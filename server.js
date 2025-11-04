@@ -51,7 +51,23 @@ app.use(cookieParser());
 // Middleware
 // Allow requests from the frontend and allow credentials (cookies) to be sent.
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3001";
-app.use(cors());
+const allowedOrigin = "https://customer-service-admin.vercel.app";
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or Postman)
+      if (!origin || origin === allowedOrigin) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
