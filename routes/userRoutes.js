@@ -64,8 +64,8 @@ router.post("/auth/sign-up", async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      sameSite: "none",
     });
 
     res.status(201).json({ success: true });
@@ -141,7 +141,7 @@ router.post("/auth/sign-in", async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -253,9 +253,8 @@ router.post("/auth/sign-out", auth, (req, res) => {
   res.cookie("token", "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "none",
     expires: new Date(0),
-    path: "/",
   });
 
   res.json({ success: true });

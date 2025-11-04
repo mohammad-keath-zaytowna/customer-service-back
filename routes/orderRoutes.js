@@ -11,7 +11,6 @@ const router = express.Router();
 router.post("/", auth, upload.array("images", 5), async (req, res) => {
   try {
     const { name, address, price, phoneNumber, details } = req.body;
-    console.log("req.files", req.files);
     // Check if files were uploaded
     if (!req.files || req.files.length === 0) {
       return res
@@ -65,7 +64,6 @@ router.post("/", auth, upload.array("images", 5), async (req, res) => {
 // Get all orders (admin only)
 router.get("/all", auth, isAdmin, async (req, res) => {
   try {
-    console.log("success middleware");
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const search = req.query.search || "";
