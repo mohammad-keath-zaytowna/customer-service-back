@@ -92,19 +92,26 @@ router.get("/all", auth, isAdmin, async (req, res) => {
     }
 
     // 🔍 Search (by user name or email)
-    const searchFilter = search
-      ? {
-          $or: [
-            { "userId.name": { $regex: search, $options: "i" } },
-            { "userId.email": { $regex: search, $options: "i" } },
-          ],
-        }
-      : {};
+    let userIds = [];
+    if (search) {
+      const users = await User.find({
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ],
+      }).select("_id");
+
+      userIds = users.map((u) => u._id);
+      // add to query
+      query.$or = [
+        { userId: { $in: userIds } },
+        { name: { $regex: search, $options: "i" } },
+      ];
+    }
 
     // 🧮 Count total
     const totalItems = await Order.countDocuments({
       ...query,
-      ...searchFilter,
     });
 
     const totalPages = Math.ceil(totalItems / limit);
@@ -113,7 +120,6 @@ router.get("/all", auth, isAdmin, async (req, res) => {
     // 📦 Fetch orders with filters + pagination
     const orders = await Order.find({
       ...query,
-      ...searchFilter,
     })
       .populate("userId", "name email")
       .sort({ createdAt: -1 })
@@ -227,5 +233,70 @@ router.delete("/:id", auth, isAdmin, async (req, res) => {
     });
   }
 });
+// Update order fields (admin only, no images)
+router.patch("/:id", auth, isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid order id" });
+    }
 
+    // نسمح فقط بهالحقلان (ما منقرب على images, invoice_no, userId)
+    const { name, address, price, phoneNumber, details, status } = req.body;
+
+    // status حسب السكيمة تبعك
+    const allowedStatuses = ["pending", "processing", "completed", "cancelled"];
+    if (status !== undefined && !allowedStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
+
+    // منبني الداتا يلي رح نحدّثها بس من الحقول المسموحة
+    const updateDoc = {};
+    if (name !== undefined) updateDoc.name = String(name).trim();
+    if (address !== undefined) updateDoc.address = String(address).trim();
+
+    if (price !== undefined) {
+      const num = Number(price);
+      if (Number.isNaN(num) || num < 0) {
+        return res.status(400).json({ message: "Invalid price" });
+      }
+      updateDoc.price = num;
+    }
+
+    if (phoneNumber !== undefined)
+      updateDoc.phoneNumber = String(phoneNumber).trim();
+    if (details !== undefined) updateDoc.details = String(details).trim();
+    if (status !== undefined) updateDoc.status = status;
+
+    // تجاهُل أي محاولة لتعديل الصور/الفواتير/المستخدم
+    if (
+      "images" in req.body ||
+      "invoice_no" in req.body ||
+      "userId" in req.body
+    ) {
+      // ممكن ترجع تحذير لطيف، بس هون عم نتجاهل بصمت
+    }
+
+    const updated = await Order.findByIdAndUpdate(id, updateDoc, {
+      new: true,
+      runValidators: true, // حتى enum/min/required الجزئية تتطبق
+    }).populate("userId", "name email");
+
+    if (!updated) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // بس للرد: منحوّل الصور لروابط جاهزة (بدون تعديل بالـ DB)
+    const orderObj = updated.toObject();
+    orderObj.images = (orderObj.images || []).map((img) => getFileUrl(img));
+
+    return res.json({ message: "Order updated", order: orderObj });
+  } catch (error) {
+    console.error("Error updating order:", error);
+    return res.status(500).json({
+      message: "Error updating order",
+      error: error.message,
+    });
+  }
+});
 module.exports = router;
